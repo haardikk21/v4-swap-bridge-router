@@ -162,7 +162,7 @@ contract SwapAndBridgeOptimismRouter is Ownable {
             currency.take(manager, address(this), amount, false);
 
             if (currency.isNative()) {
-                l1StandardBridge.depositETHTo(recipient, 0, "");
+                l1StandardBridge.depositETHTo{value: amount}(recipient, 0, "");
             } else {
                 address l1Token = Currency.unwrap(currency);
                 address l2Token = l1ToL2TokenAddresses[l1Token];
