@@ -3,14 +3,14 @@ src = "src"
 out = "out"
 libs = ["lib"]
 solc_version = '0.8.26'
-evm_version = "cancun"
+evm_version = "prague"
 optimizer_runs = 800
 via_ir = false
 ffi = true
 
 [rpc_endpoints]
-sepolia = "https://rpc.sepolia.org/"
-op_sepolia = "https://sepolia.optimism.io"
+sepolia = "${RPC_SEPOLIA_URL}" 
+op_sepolia = "${RPC_OP_SEPOLIA_URL}"
 
 [etherscan]
 sepolia = { key = "${ETHERSCAN_API_KEY}" }
