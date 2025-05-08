@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.26;
 
 import {Test, Vm} from "forge-std/Test.sol";
 import {Deployers} from "@uniswap/v4-core/test/utils/Deployers.sol";
 import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
 import {PoolManager} from "v4-core/PoolManager.sol";
 import {IPoolManager} from "v4-core/interfaces/IPoolManager.sol";
+import {SwapParams, ModifyLiquidityParams} from "v4-core/types/PoolOperation.sol";
 import {Currency, CurrencyLibrary} from "v4-core/types/Currency.sol";
 import {PoolId, PoolIdLibrary} from "v4-core/types/PoolId.sol";
 import {PoolKey} from "v4-core/types/PoolKey.sol";
@@ -97,21 +98,11 @@ contract TestSwapAndBridgeOptimismRouter is Test, Deployers {
 
         // Deploy an ETH <> OUTb pool and add some liquidity there
         (key,) = initPool(
-            CurrencyLibrary.NATIVE,
-            Currency.wrap(address(OUTbL1Token)),
-            IHooks(address(0)),
-            3000,
-            SQRT_PRICE_1_1,
-            ZERO_BYTES
+            CurrencyLibrary.ADDRESS_ZERO, Currency.wrap(address(OUTbL1Token)), IHooks(address(0)), 3000, SQRT_PRICE_1_1
         );
         modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(
             key,
-            IPoolManager.ModifyLiquidityParams({
-                tickLower: -60,
-                tickUpper: 60,
-                liquidityDelta: 10 ether,
-                salt: bytes32(0)
-            }),
+            ModifyLiquidityParams({tickLower: -60, tickUpper: 60, liquidityDelta: 10 ether, salt: bytes32(0)}),
             ZERO_BYTES
         );
     }
@@ -147,11 +138,7 @@ contract TestSwapAndBridgeOptimismRouter is Test, Deployers {
 
         poolSwapAndBridgeOptimism.swap{value: 0.001 ether}(
             key,
-            IPoolManager.SwapParams({
-                zeroForOne: true,
-                amountSpecified: -0.001 ether,
-                sqrtPriceLimitX96: TickMath.MIN_SQRT_PRICE + 1
-            }),
+            SwapParams({zeroForOne: true, amountSpecified: -0.001 ether, sqrtPriceLimitX96: TickMath.MIN_SQRT_PRICE + 1}),
             SwapAndBridgeOptimismRouter.SwapSettings({bridgeTokens: true, recipientAddress: address(this)}),
             ZERO_BYTES
         );
@@ -194,11 +181,7 @@ contract TestSwapAndBridgeOptimismRouter is Test, Deployers {
 
         poolSwapAndBridgeOptimism.swap{value: 0.001 ether}(
             key,
-            IPoolManager.SwapParams({
-                zeroForOne: true,
-                amountSpecified: -0.001 ether,
-                sqrtPriceLimitX96: TickMath.MIN_SQRT_PRICE + 1
-            }),
+            SwapParams({zeroForOne: true, amountSpecified: -0.001 ether, sqrtPriceLimitX96: TickMath.MIN_SQRT_PRICE + 1}),
             SwapAndBridgeOptimismRouter.SwapSettings({bridgeTokens: true, recipientAddress: recipientAddress}),
             ZERO_BYTES
         );
@@ -225,7 +208,7 @@ contract TestSwapAndBridgeOptimismRouter is Test, Deployers {
 
         poolSwapAndBridgeOptimism.swap(
             key,
-            IPoolManager.SwapParams({
+            SwapParams({
                 zeroForOne: false,
                 amountSpecified: -0.001 ether,
                 sqrtPriceLimitX96: TickMath.MAX_SQRT_PRICE - 1
@@ -257,7 +240,7 @@ contract TestSwapAndBridgeOptimismRouter is Test, Deployers {
 
         poolSwapAndBridgeOptimism.swap(
             key,
-            IPoolManager.SwapParams({
+            SwapParams({
                 zeroForOne: false,
                 amountSpecified: -0.001 ether,
                 sqrtPriceLimitX96: TickMath.MAX_SQRT_PRICE - 1
@@ -277,11 +260,7 @@ contract TestSwapAndBridgeOptimismRouter is Test, Deployers {
 
         poolSwapAndBridgeOptimism.swap{value: 0.001 ether}(
             key,
-            IPoolManager.SwapParams({
-                zeroForOne: true,
-                amountSpecified: -0.001 ether,
-                sqrtPriceLimitX96: TickMath.MIN_SQRT_PRICE + 1
-            }),
+            SwapParams({zeroForOne: true, amountSpecified: -0.001 ether, sqrtPriceLimitX96: TickMath.MIN_SQRT_PRICE + 1}),
             SwapAndBridgeOptimismRouter.SwapSettings({bridgeTokens: false, recipientAddress: address(this)}),
             ZERO_BYTES
         );
@@ -304,7 +283,7 @@ contract TestSwapAndBridgeOptimismRouter is Test, Deployers {
 
         poolSwapAndBridgeOptimism.swap(
             key,
-            IPoolManager.SwapParams({
+            SwapParams({
                 zeroForOne: false,
                 amountSpecified: -0.001 ether,
                 sqrtPriceLimitX96: TickMath.MAX_SQRT_PRICE - 1
