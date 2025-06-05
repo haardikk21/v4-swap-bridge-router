@@ -9,6 +9,7 @@ import {PoolKey} from "v4-core/types/PoolKey.sol";
 import {BalanceDelta} from "v4-core/types/BalanceDelta.sol";
 import {IERC20Minimal} from "v4-core/interfaces/external/IERC20Minimal.sol";
 import {TransientStateLibrary} from "v4-core/libraries/TransientStateLibrary.sol";
+import {SwapParams} from "v4-core/types/PoolOperation.sol";
 
 interface IL1StandardBridge {
     function depositETHTo(
@@ -40,7 +41,7 @@ contract SwapAndBridgeOptimismRouter is Ownable {
         address sender;
         SwapSettings settings;
         PoolKey key;
-        IPoolManager.SwapParams params;
+        SwapParams params;
         bytes hookData;
     }
 
@@ -62,16 +63,19 @@ contract SwapAndBridgeOptimismRouter is Ownable {
 
     function swap(
         PoolKey memory key,
-        IPoolManager.SwapParams memory params,
+        SwapParams memory params,
         SwapSettings memory settings,
         bytes memory hookData
     ) external payable returns (BalanceDelta delta) {
+        // If user requested a bridge of the output tokens
+        // we must make sure the output token can be bridged at all
+        // otherwise we revert the transaction early
         if (settings.bridgeTokens) {
             Currency l1TokenToBridge = params.zeroForOne
                 ? key.currency1
                 : key.currency0;
 
-            if (!l1TokenToBridge.isNative()) {
+            if (!l1TokenToBridge.isAddressZero()) {
                 address l2Token = l1ToL2TokenAddresses[
                     Currency.unwrap(l1TokenToBridge)
                 ];
@@ -79,6 +83,7 @@ contract SwapAndBridgeOptimismRouter is Ownable {
             }
         }
 
+        // Unlock the pool manager which will trigger a callback
         delta = abi.decode(
             manager.unlock(
                 abi.encode(
@@ -88,61 +93,53 @@ contract SwapAndBridgeOptimismRouter is Ownable {
             (BalanceDelta)
         );
 
+        // Send any ETH left over to the sender
         uint256 ethBalance = address(this).balance;
         if (ethBalance > 0)
-            CurrencyLibrary.NATIVE.transfer(msg.sender, ethBalance);
+            CurrencyLibrary.ADDRESS_ZERO.transfer(msg.sender, ethBalance);
     }
 
     function unlockCallback(
         bytes calldata rawData
     ) external returns (bytes memory) {
         if (msg.sender != address(manager)) revert CallerNotManager();
-
         CallbackData memory data = abi.decode(rawData, (CallbackData));
 
+        // Call swap on the PM
         BalanceDelta delta = manager.swap(data.key, data.params, data.hookData);
 
-        int256 deltaAfter0 = manager.currencyDelta(
-            address(this),
-            data.key.currency0
-        );
-        int256 deltaAfter1 = manager.currencyDelta(
-            address(this),
-            data.key.currency1
-        );
-
-        if (deltaAfter0 < 0) {
+        if (delta.amount0() < 0) {
             data.key.currency0.settle(
                 manager,
                 data.sender,
-                uint256(-deltaAfter0),
+                uint256(int256(-delta.amount0())),
                 false
             );
         }
 
-        if (deltaAfter1 < 0) {
+        if (delta.amount1() < 0) {
             data.key.currency1.settle(
                 manager,
                 data.sender,
-                uint256(-deltaAfter1),
+                uint256(int256(-delta.amount1())),
                 false
             );
         }
 
-        if (deltaAfter0 > 0) {
+        if (delta.amount0() > 0) {
             _take(
                 data.key.currency0,
                 data.settings.recipientAddress,
-                uint256(deltaAfter0),
+                uint256(int256(delta.amount0())),
                 data.settings.bridgeTokens
             );
         }
 
-        if (deltaAfter1 > 0) {
+        if (delta.amount1() > 0) {
             _take(
                 data.key.currency1,
                 data.settings.recipientAddress,
-                uint256(deltaAfter1),
+                uint256(int256(delta.amount1())),
                 data.settings.bridgeTokens
             );
         }
@@ -156,12 +153,14 @@ contract SwapAndBridgeOptimismRouter is Ownable {
         uint256 amount,
         bool bridgeToOptimism
     ) internal {
+        // If not bridging, just send the tokens to the swapper
         if (!bridgeToOptimism) {
             currency.take(manager, recipient, amount, false);
         } else {
+            // If we are bridging, take tokens to the router and then bridge to the recipient address on the L2
             currency.take(manager, address(this), amount, false);
 
-            if (currency.isNative()) {
+            if (currency.isAddressZero()) {
                 l1StandardBridge.depositETHTo{value: amount}(recipient, 0, "");
             } else {
                 address l1Token = Currency.unwrap(currency);

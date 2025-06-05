@@ -13,6 +13,7 @@ import {Hooks} from "v4-core/libraries/Hooks.sol";
 import {IHooks} from "v4-core/interfaces/IHooks.sol";
 import {SwapAndBridgeOptimismRouter, IL1StandardBridge} from "../src/SwapAndBridgeOptimismRouter.sol";
 import {TickMath} from "v4-core/libraries/TickMath.sol";
+import {SwapParams, ModifyLiquidityParams} from "v4-core/types/PoolOperation.sol";
 
 interface IOUTbToken {
     function approve(address spender, uint256 amount) external returns (bool);
@@ -75,7 +76,7 @@ contract TestSwapAndBridgeOptimismRouter is Test, Deployers {
                             TEST STORAGE
     //////////////////////////////////////////////////////////////*/
 
-    uint256 sepoliaForkId = vm.createFork("https://rpc.sepolia.org/");
+    uint256 sepoliaForkId = vm.createFork("https://sepolia.drpc.org");
 
     SwapAndBridgeOptimismRouter poolSwapAndBridgeOptimism;
 
@@ -124,16 +125,15 @@ contract TestSwapAndBridgeOptimismRouter is Test, Deployers {
 
         // Deploy an ETH <> OUTb pool and add some liquidity there
         (key, ) = initPool(
-            CurrencyLibrary.NATIVE,
+            CurrencyLibrary.ADDRESS_ZERO,
             Currency.wrap(address(OUTbL1Token)),
             IHooks(address(0)),
             3000,
-            SQRT_PRICE_1_1,
-            ZERO_BYTES
+            SQRT_PRICE_1_1
         );
         modifyLiquidityRouter.modifyLiquidity{value: 1 ether}(
             key,
-            IPoolManager.ModifyLiquidityParams({
+            ModifyLiquidityParams({
                 tickLower: -60,
                 tickUpper: 60,
                 liquidityDelta: 10 ether,
@@ -186,7 +186,7 @@ contract TestSwapAndBridgeOptimismRouter is Test, Deployers {
 
         poolSwapAndBridgeOptimism.swap{value: 0.001 ether}(
             key,
-            IPoolManager.SwapParams({
+            SwapParams({
                 zeroForOne: true,
                 amountSpecified: -0.001 ether,
                 sqrtPriceLimitX96: TickMath.MIN_SQRT_PRICE + 1
@@ -238,7 +238,7 @@ contract TestSwapAndBridgeOptimismRouter is Test, Deployers {
 
         poolSwapAndBridgeOptimism.swap{value: 0.001 ether}(
             key,
-            IPoolManager.SwapParams({
+            SwapParams({
                 zeroForOne: true,
                 amountSpecified: -0.001 ether,
                 sqrtPriceLimitX96: TickMath.MIN_SQRT_PRICE + 1
@@ -284,7 +284,7 @@ contract TestSwapAndBridgeOptimismRouter is Test, Deployers {
 
         poolSwapAndBridgeOptimism.swap(
             key,
-            IPoolManager.SwapParams({
+            SwapParams({
                 zeroForOne: false,
                 amountSpecified: -0.001 ether,
                 sqrtPriceLimitX96: TickMath.MAX_SQRT_PRICE - 1
@@ -331,7 +331,7 @@ contract TestSwapAndBridgeOptimismRouter is Test, Deployers {
 
         poolSwapAndBridgeOptimism.swap(
             key,
-            IPoolManager.SwapParams({
+            SwapParams({
                 zeroForOne: false,
                 amountSpecified: -0.001 ether,
                 sqrtPriceLimitX96: TickMath.MAX_SQRT_PRICE - 1
@@ -354,7 +354,7 @@ contract TestSwapAndBridgeOptimismRouter is Test, Deployers {
 
         poolSwapAndBridgeOptimism.swap{value: 0.001 ether}(
             key,
-            IPoolManager.SwapParams({
+            SwapParams({
                 zeroForOne: true,
                 amountSpecified: -0.001 ether,
                 sqrtPriceLimitX96: TickMath.MIN_SQRT_PRICE + 1
@@ -384,7 +384,7 @@ contract TestSwapAndBridgeOptimismRouter is Test, Deployers {
 
         poolSwapAndBridgeOptimism.swap(
             key,
-            IPoolManager.SwapParams({
+            SwapParams({
                 zeroForOne: false,
                 amountSpecified: -0.001 ether,
                 sqrtPriceLimitX96: TickMath.MAX_SQRT_PRICE - 1

@@ -9,6 +9,7 @@ import {Currency, CurrencyLibrary} from "v4-core/types/Currency.sol";
 import {IHooks} from "v4-core/interfaces/IHooks.sol";
 import {TickMath} from "v4-core/libraries/TickMath.sol";
 import {PoolManager} from "v4-core/PoolManager.sol";
+import {SwapParams, ModifyLiquidityParams} from "v4-core/types/PoolOperation.sol";
 
 import {Vm} from "forge-std/Test.sol";
 import "forge-std/Script.sol";
@@ -72,18 +73,17 @@ contract SwapAndBridgeOptimismRouterScript is Script, Deployers {
 
         // Initialize an ETH <> OUTb pool and add some liquidity there
         (key, ) = initPool(
-            CurrencyLibrary.NATIVE,
+            CurrencyLibrary.ADDRESS_ZERO,
             Currency.wrap(address(OUTbL1Token)),
             IHooks(address(0)),
             3000,
-            SQRT_PRICE_1_1,
-            ZERO_BYTES
+            SQRT_PRICE_1_1
         );
 
         // Add some liquidity to the pool
         modifyLiquidityRouter.modifyLiquidity{value: 0.1 ether}(
             key,
-            IPoolManager.ModifyLiquidityParams({
+            ModifyLiquidityParams({
                 tickLower: -60,
                 tickUpper: 60,
                 liquidityDelta: 0.1 ether,
@@ -95,7 +95,7 @@ contract SwapAndBridgeOptimismRouterScript is Script, Deployers {
         vm.recordLogs();
         poolSwapAndBridgeOptimism.swap{value: 0.001 ether}(
             key,
-            IPoolManager.SwapParams({
+            SwapParams({
                 zeroForOne: true,
                 amountSpecified: -0.001 ether,
                 sqrtPriceLimitX96: TickMath.MIN_SQRT_PRICE + 1
